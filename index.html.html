@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ESP8266 Process Control Dashboard — JKUAT</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="container">
+
+  <h2 class="sr-only">
+    ESP8266 Level, Flow and Process Control Dashboard —
+    real-time sensor monitoring, PID tuning, Wi-Fi data logging,
+    and performance analysis for a three-tank control system.
+  </h2>
+
+  <!-- ── TOP BAR ─────────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="sys-title">Level · Flow · Process Control</div>
+        <div class="sys-sub">ESP8266 · Three-tank system · JKUAT</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="conn-badge" id="conn-status" onclick="toggleMode()">
+        <span class="dot" id="conn-dot"></span>
+        <span id="conn-label">Offline</span>
+      </div>
+      <div class="ts-label" id="last-update">No data yet</div>
+    </div>
+  </div>
+
+  <!-- ── TABS ────────────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('charts')">Charts</button>
+    <button class="tab" onclick="showTab('pid')">PID tuning</button>
+    <button class="tab" onclick="showTab('wifi')">Wi-Fi setup</button>
+    <button class="tab" onclick="showTab('log')">Data log</button>
+    <button class="tab" onclick="showTab('perf')">Performance</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 1 — OVERVIEW
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel active" id="panel-overview">
+
+    <div class="metrics" id="top-metrics">
+      <div class="mc" id="mc-level">
+        <div class="mlabel">Tank level</div>
+        <div class="mval">--<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-sp">
+        <div class="mlabel">Setpoint</div>
+        <div class="mval">20<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-err">
+        <div class="mlabel">Error</div>
+        <div class="mval">--<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-fin">
+        <div class="mlabel">Inflow</div>
+        <div class="mval">--<span class="munit">L/m</span></div>
+      </div>
+      <div class="mc" id="mc-temp">
+        <div class="mlabel">Temp</div>
+        <div class="mval">--<span class="munit">°C</span></div>
+      </div>
+      <div class="mc" id="mc-pwm">
+        <div class="mlabel">Pump PWM</div>
+        <div class="mval">--<span class="munit">%</span></div>
+      </div>
+    </div>
+
+    <div class="gauge-row">
+      <div class="gauge">
+        <div class="gauge-label">Tank level</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-level" style="width:0%;background:#185FA5"></div>
+        </div>
+        <div class="gauge-val" id="gv-level">-- <span class="gauge-unit">/ 40 cm</span></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Pump PWM</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-pwm" style="width:0%;background:#7F77DD"></div>
+        </div>
+        <div class="gauge-val" id="gv-pwm">-- <span class="gauge-unit">%</span></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Temperature</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-temp" style="width:0%;background:#D85A30"></div>
+        </div>
+        <div class="gauge-val" id="gv-temp">-- <span class="gauge-unit">/ 80 °C</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Setpoint &amp; control mode</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>Setpoint (cm)</label>
+          <input type="number" id="ov-sp" value="20" min="0" max="40" step="0.5" oninput="updateSP()">
+        </div>
+        <div class="field">
+          <label>Control mode</label>
+          <select id="ov-mode" onchange="updateMode()">
+            <option>ON/OFF</option>
+            <option>P</option>
+            <option>PI</option>
+            <option selected>PID</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Heater</label>
+          <select id="ov-heat">
+            <option>OFF</option>
+            <option>ON</option>
+          </select>
+        </div>
+      </div>
+      <div id="alerts-box" style="margin-top:.75rem"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Manual sensor entry (offline mode)</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Level (cm)</label>
+          <input type="number" id="m-level" placeholder="e.g. 18.5" step="0.1">
+        </div>
+        <div class="field">
+          <label>Inflow (L/min)</label>
+          <input type="number" id="m-fin" placeholder="e.g. 2.1" step="0.01">
+        </div>
+      </div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>Outflow (L/min)</label>
+          <input type="number" id="m-fout" placeholder="e.g. 1.9" step="0.01">
+        </div>
+        <div class="field">
+          <label>Temperature (°C)</label>
+          <input type="number" id="m-temp" placeholder="e.g. 28.5" step="0.1">
+        </div>
+        <div class="field">
+          <label>Pump PWM (%)</label>
+          <input type="number" id="m-pwm" placeholder="0–100" min="0" max="100">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:8px">
+        <label>Notes</label>
+        <input type="text" id="m-note" placeholder="e.g. step disturbance at t=30s">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="addManual()">Log reading</button>
+        <button class="btn" onclick="simulateStream()">Simulate stream</button>
+      </div>
+    </div>
+
+  </div><!-- /panel-overview -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 2 — CHARTS
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-charts">
+
+    <div class="card">
+      <div class="ctitle">Level vs setpoint</div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#185FA5"></span>Level</span>
+        <span><span class="legend-dot" style="background:#E24B4A;border-top:2px dashed #E24B4A;background:transparent"></span>Setpoint</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cLevel" role="img" aria-label="Tank level vs setpoint">Tank level vs setpoint</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Flow rates</div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#1D9E75"></span>Inflow</span>
+        <span><span class="legend-dot" style="background:#EF9F27"></span>Outflow</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cFlow" role="img" aria-label="Inflow and outflow rates">Flow rates</canvas>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="card">
+        <div class="ctitle">Temperature</div>
+        <div class="chart-wrap short">
+          <canvas id="cTemp" role="img" aria-label="Temperature over time">Temperature</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Pump PWM</div>
+        <div class="chart-wrap short">
+          <canvas id="cPWM" role="img" aria-label="Pump PWM over time">PWM</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="buildCharts()">Refresh charts</button>
+      <button class="btn" onclick="clearData()">Clear all data</button>
+    </div>
+
+  </div><!-- /panel-charts -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 3 — PID TUNING
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-pid">
+
+    <div class="card">
+      <div class="ctitle">Ziegler–Nichols calculator</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Ultimate gain K<sub>u</sub></label>
+          <input type="number" id="ku" placeholder="e.g. 4.2" step="0.01" oninput="calcZN()">
+        </div>
+        <div class="field">
+          <label>Oscillation period P<sub>u</sub> (s)</label>
+          <input type="number" id="pu" placeholder="e.g. 12" step="0.1" oninput="calcZN()">
+        </div>
+      </div>
+      <div class="zn-grid" id="zn-out">
+        <div class="gauge">
+          <div class="gauge-label">P only</div>
+          <div class="zn-sublabel">Kp</div>
+          <div class="pid-num" id="zp-kp">—</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">PI</div>
+          <div class="zn-sublabel">Kp / Ti</div>
+          <div class="pid-num" id="zpi-kp">—</div>
+          <div class="zn-sub" id="zpi-ti"></div>
+        </div>
+        <div class="gauge zn-highlight">
+          <div class="gauge-label">PID</div>
+          <div class="zn-sublabel">Kp / Ki / Kd</div>
+          <div class="pid-num" id="zpid-kp">—</div>
+          <div class="zn-sub" id="zpid-ti"></div>
+          <div class="zn-sub" id="zpid-td"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Active PID gains</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>K<sub>p</sub></label>
+          <input type="number" id="pk" placeholder="0.000" step="0.001" oninput="updatePIDDisplay()">
+        </div>
+        <div class="field">
+          <label>K<sub>i</sub></label>
+          <input type="number" id="ik" placeholder="0.000" step="0.0001" oninput="updatePIDDisplay()">
+        </div>
+        <div class="field">
+          <label>K<sub>d</sub></label>
+          <input type="number" id="dk" placeholder="0.000" step="0.0001" oninput="updatePIDDisplay()">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Tuning method</label>
+          <select id="tune-method">
+            <option>Ziegler–Nichols</option>
+            <option>Manual</option>
+            <option>Trial &amp; error</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Observations</label>
+          <input type="text" id="tune-obs" placeholder="e.g. stable, no overshoot">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="savePID()">Save session</button>
+        <button class="btn" onclick="applyZN()">Apply Z-N values</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">PID session history</div>
+      <div id="pid-hist"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">ESP8266 Arduino sketch snippet</div>
+      <pre class="code-block" id="arduino-code">// Enter Kp, Ki, Kd above to generate snippet</pre>
+    </div>
+
+  </div><!-- /panel-pid -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 4 — WI-FI SETUP
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-wifi">
+
+    <div class="alert-box info">
+      This dashboard can receive sensor data directly from your ESP8266 over Wi-Fi.
+      Configure your ESP8266 to POST JSON to the endpoint shown below.
+    </div>
+
+    <div class="card">
+      <div class="ctitle">ESP8266 Arduino sketch (Wi-Fi POST)</div>
+      <pre class="code-block">#include &lt;ESP8266WiFi.h&gt;
+#include &lt;ESP8266HTTPClient.h&gt;
+#include &lt;ArduinoJson.h&gt;
+
+const char* ssid     = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+const char* endpoint = "http://&lt;your-server-ip&gt;:5000/data";
+
+float readLevel()  { /* HC-SR04 ultrasonic */ return level_cm; }
+float readFlow()   { /* YF-S201 pulse count */ return flow_Lmin; }
+float readTemp()   { /* DS18B20 one-wire    */ return temp_C; }
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+  Serial.println("Connected: " + WiFi.localIP().toString());
+}
+
+void loop() {
+  StaticJsonDocument&lt;256&gt; doc;
+  doc["level"] = readLevel();
+  doc["fin"]   = readFlow();
+  doc["fout"]  = 0;
+  doc["temp"]  = readTemp();
+  doc["pwm"]   = analogRead(A0) / 10.24;
+  doc["sp"]    = 20.0;
+  doc["mode"]  = "PID";
+
+  String body; serializeJson(doc, body);
+  WiFiClient client; HTTPClient http;
+  http.begin(client, endpoint);
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST(body);
+  Serial.println("POST " + String(code));
+  http.end();
+  delay(1000);
+}</pre>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Python Flask receiver (run on your laptop)</div>
+      <pre class="code-block">from flask import Flask, request, jsonify
+import csv, time
+
+app = Flask(__name__)
+log_file = "sensor_log.csv"
+
+@app.route("/data", methods=["POST"])
+def receive():
+    data = request.get_json()
+    data["ts"] = time.strftime("%H:%M:%S")
+    print(data)
+    with open(log_file, "a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=data.keys())
+        if f.tell() == 0: w.writeheader()
+        w.writerow(data)
+    return jsonify({"ok": True})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+# Run: python server.py
+# ESP8266 posts to: http://&lt;laptop-ip&gt;:5000/data</pre>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Simulate Wi-Fi stream (demo)</div>
+      <p class="hint-text">
+        No hardware? Click below to simulate a live ESP8266 stream with
+        realistic PID dynamics and a step disturbance at reading 15.
+      </p>
+      <div class="btn-row">
+        <button class="btn primary" onclick="startSim()">Start simulation</button>
+        <button class="btn" onclick="stopSim()">Stop</button>
+      </div>
+      <div class="sim-status" id="sim-status">Idle</div>
+    </div>
+
+  </div><!-- /panel-wifi -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 5 — DATA LOG
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-log">
+    <div class="card">
+      <div class="log-header">
+        <div class="ctitle" style="margin-bottom:0">Sensor log</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="ts-label" id="log-count">0 readings</span>
+          <button class="btn small" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <div id="log-wrap"><div class="empty">No readings logged yet.</div></div>
+    </div>
+  </div><!-- /panel-log -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 6 — PERFORMANCE
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-perf">
+    <div id="perf-wrap">
+      <div class="empty">Log at least 5 readings with a setpoint to compute metrics.</div>
+    </div>
+  </div><!-- /panel-perf -->
+
+</div><!-- /container -->
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- App logic -->
+<script src="app.js"></script>
+
+</body>
+</html>

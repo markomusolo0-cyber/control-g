@@ -1,0 +1,489 @@
+/* ============================================================
+   style.css — ESP8266 Process Control Dashboard
+   JKUAT · Level, Flow & Temperature Control System
+   ============================================================ */
+
+/* ── Reset & base ─────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+/* ── Screen-reader only ───────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .75rem 0 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sys-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+}
+
+.sys-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.ts-label {
+  font-size: 12px;
+  color: #888;
+}
+
+/* ── Connection badge ─────────────────────────────────────── */
+.conn-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  font-size: 12px;
+  cursor: pointer;
+  background: #f5f5f5;
+  color: #555;
+  user-select: none;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.dot.online { background: #1D9E75; }
+.dot.sim    { background: #EF9F27; }
+.dot.off    { background: #888; }
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 5px 13px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: #666;
+  transition: background .12s, color .12s;
+}
+
+.tab.active {
+  background: #f0f0f0;
+  color: #111;
+  border-color: #ddd;
+  font-weight: 500;
+}
+
+.tab:hover:not(.active) {
+  background: #f5f5f5;
+}
+
+/* ── Panels ───────────────────────────────────────────────── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Metric cards ─────────────────────────────────────────── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.mc {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: .65rem .9rem;
+}
+
+.mc .mlabel {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.mc .mval {
+  font-size: 20px;
+  font-weight: 500;
+  color: #111;
+  line-height: 1.1;
+}
+
+.mc .munit {
+  font-size: 11px;
+  color: #888;
+  margin-left: 2px;
+}
+
+.mc.alert-card { background: #FCEBEB; }
+.mc.alert-card .mval { color: #A32D2D; }
+
+.mc.warn-card { background: #FAEEDA; }
+.mc.warn-card .mval { color: #854F0B; }
+
+.mc.ok-card { background: #EAF3DE; }
+.mc.ok-card .mval { color: #3B6D11; }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: .9rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.ctitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .85rem;
+}
+
+/* ── Gauges ───────────────────────────────────────────────── */
+.gauge-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.gauge {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: .75rem;
+  text-align: center;
+}
+
+.gauge-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: .5rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.gauge-bar-bg {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: .4rem;
+}
+
+.gauge-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .5s ease;
+}
+
+.gauge-val {
+  font-size: 16px;
+  font-weight: 500;
+  color: #111;
+}
+
+.gauge-unit {
+  font-size: 11px;
+  color: #888;
+  margin-left: 2px;
+}
+
+/* ── Charts ───────────────────────────────────────────────── */
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  margin-bottom: .5rem;
+}
+
+.chart-wrap.short {
+  height: 150px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: .75rem;
+  font-size: 12px;
+  color: #666;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Forms ────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-grid.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 3px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: #185FA5;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+  color: #111;
+  transition: background .12s;
+}
+
+.btn.primary {
+  background: #111;
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn:hover { background: #f0f0f0; }
+.btn.primary:hover { opacity: .85; background: #111; }
+
+.btn.small {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 1px solid #e5e5e5;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #111;
+}
+
+tr:last-child td { border-bottom: none; }
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge.good  { background: #EAF3DE; color: #3B6D11; }
+.badge.warn  { background: #FAEEDA; color: #854F0B; }
+.badge.bad   { background: #FCEBEB; color: #A32D2D; }
+.badge.info  { background: #E6F1FB; color: #185FA5; }
+
+/* ── Code blocks ──────────────────────────────────────────── */
+.code-block {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: .75rem 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #111;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  white-space: pre;
+}
+
+/* ── PID / Z-N ────────────────────────────────────────────── */
+.zn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: .75rem;
+}
+
+.zn-highlight {
+  border: 1.5px solid #185FA5 !important;
+}
+
+.zn-sublabel {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.zn-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.pid-num {
+  font-size: 18px;
+  font-weight: 500;
+  color: #111;
+}
+
+/* ── Alert boxes ──────────────────────────────────────────── */
+.alert-box {
+  padding: 9px 13px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  border-left: 3px solid;
+}
+
+.alert-box.info   { background: #E6F1FB; color: #185FA5; border-color: #378ADD; }
+.alert-box.warn   { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+.alert-box.danger { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
+.alert-box.ok     { background: #EAF3DE; color: #3B6D11; border-color: #1D9E75; }
+
+/* ── Misc helpers ─────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: #888;
+  font-size: 13px;
+}
+
+.hint-text {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: .75rem;
+}
+
+.sim-status {
+  margin-top: .75rem;
+  font-size: 13px;
+  color: #888;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+
+.perf-bar-bg {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .gauge-row        { grid-template-columns: 1fr; }
+  .row2             { grid-template-columns: 1fr; }
+  .form-grid.three  { grid-template-columns: 1fr 1fr; }
+  .zn-grid          { grid-template-columns: 1fr; }
+}
