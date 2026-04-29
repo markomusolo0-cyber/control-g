@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ESP8266 Process Control Dashboard — JKUAT</title>
+  
+<style>
+/* ============================================================
+   style.css — ESP8266 Process Control Dashboard
+   JKUAT · Level, Flow & Temperature Control System
+   ============================================================ */
+
+/* ── Reset & base ─────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1a1a1a;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+/* ── Screen-reader only ───────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .75rem 0 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sys-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+}
+
+.sys-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.ts-label {
+  font-size: 12px;
+  color: #888;
+}
+
+/* ── Connection badge ─────────────────────────────────────── */
+.conn-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  font-size: 12px;
+  cursor: pointer;
+  background: #f5f5f5;
+  color: #555;
+  user-select: none;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.dot.online { background: #1D9E75; }
+.dot.sim    { background: #EF9F27; }
+.dot.off    { background: #888; }
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 5px 13px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: #666;
+  transition: background .12s, color .12s;
+}
+
+.tab.active {
+  background: #f0f0f0;
+  color: #111;
+  border-color: #ddd;
+  font-weight: 500;
+}
+
+.tab:hover:not(.active) {
+  background: #f5f5f5;
+}
+
+/* ── Panels ───────────────────────────────────────────────── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Metric cards ─────────────────────────────────────────── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.mc {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: .65rem .9rem;
+}
+
+.mc .mlabel {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.mc .mval {
+  font-size: 20px;
+  font-weight: 500;
+  color: #111;
+  line-height: 1.1;
+}
+
+.mc .munit {
+  font-size: 11px;
+  color: #888;
+  margin-left: 2px;
+}
+
+.mc.alert-card { background: #FCEBEB; }
+.mc.alert-card .mval { color: #A32D2D; }
+
+.mc.warn-card { background: #FAEEDA; }
+.mc.warn-card .mval { color: #854F0B; }
+
+.mc.ok-card { background: #EAF3DE; }
+.mc.ok-card .mval { color: #3B6D11; }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: .9rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.ctitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .85rem;
+}
+
+/* ── Gauges ───────────────────────────────────────────────── */
+.gauge-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.gauge {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: .75rem;
+  text-align: center;
+}
+
+.gauge-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: .5rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.gauge-bar-bg {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: .4rem;
+}
+
+.gauge-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .5s ease;
+}
+
+.gauge-val {
+  font-size: 16px;
+  font-weight: 500;
+  color: #111;
+}
+
+.gauge-unit {
+  font-size: 11px;
+  color: #888;
+  margin-left: 2px;
+}
+
+/* ── Charts ───────────────────────────────────────────────── */
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  margin-bottom: .5rem;
+}
+
+.chart-wrap.short {
+  height: 150px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: .75rem;
+  font-size: 12px;
+  color: #666;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Forms ────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-grid.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 3px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: #185FA5;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+  color: #111;
+  transition: background .12s;
+}
+
+.btn.primary {
+  background: #111;
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn:hover { background: #f0f0f0; }
+.btn.primary:hover { opacity: .85; background: #111; }
+
+.btn.small {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 1px solid #e5e5e5;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #111;
+}
+
+tr:last-child td { border-bottom: none; }
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge.good  { background: #EAF3DE; color: #3B6D11; }
+.badge.warn  { background: #FAEEDA; color: #854F0B; }
+.badge.bad   { background: #FCEBEB; color: #A32D2D; }
+.badge.info  { background: #E6F1FB; color: #185FA5; }
+
+/* ── Code blocks ──────────────────────────────────────────── */
+.code-block {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: .75rem 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #111;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  white-space: pre;
+}
+
+/* ── PID / Z-N ────────────────────────────────────────────── */
+.zn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: .75rem;
+}
+
+.zn-highlight {
+  border: 1.5px solid #185FA5 !important;
+}
+
+.zn-sublabel {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.zn-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.pid-num {
+  font-size: 18px;
+  font-weight: 500;
+  color: #111;
+}
+
+/* ── Alert boxes ──────────────────────────────────────────── */
+.alert-box {
+  padding: 9px 13px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  border-left: 3px solid;
+}
+
+.alert-box.info   { background: #E6F1FB; color: #185FA5; border-color: #378ADD; }
+.alert-box.warn   { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
+.alert-box.danger { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
+.alert-box.ok     { background: #EAF3DE; color: #3B6D11; border-color: #1D9E75; }
+
+/* ── Misc helpers ─────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 1.5rem;
+  color: #888;
+  font-size: 13px;
+}
+
+.hint-text {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: .75rem;
+}
+
+.sim-status {
+  margin-top: .75rem;
+  font-size: 13px;
+  color: #888;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+}
+
+.perf-bar-bg {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .gauge-row        { grid-template-columns: 1fr; }
+  .row2             { grid-template-columns: 1fr; }
+  .form-grid.three  { grid-template-columns: 1fr 1fr; }
+  .zn-grid          { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <h2 class="sr-only">
+    ESP8266 Level, Flow and Process Control Dashboard —
+    real-time sensor monitoring, PID tuning, Wi-Fi data logging,
+    and performance analysis for a three-tank control system.
+  </h2>
+
+  <!-- ── TOP BAR ─────────────────────────────────────────── -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="sys-title">Level · Flow · Process Control</div>
+        <div class="sys-sub">ESP8266 · Three-tank system · JKUAT</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="conn-badge" id="conn-status" onclick="toggleMode()">
+        <span class="dot" id="conn-dot"></span>
+        <span id="conn-label">Offline</span>
+      </div>
+      <div class="ts-label" id="last-update">No data yet</div>
+    </div>
+  </div>
+
+  <!-- ── TABS ────────────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('charts')">Charts</button>
+    <button class="tab" onclick="showTab('pid')">PID tuning</button>
+    <button class="tab" onclick="showTab('wifi')">Wi-Fi setup</button>
+    <button class="tab" onclick="showTab('log')">Data log</button>
+    <button class="tab" onclick="showTab('perf')">Performance</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 1 — OVERVIEW
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel active" id="panel-overview">
+
+    <div class="metrics" id="top-metrics">
+      <div class="mc" id="mc-level">
+        <div class="mlabel">Tank level</div>
+        <div class="mval">--<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-sp">
+        <div class="mlabel">Setpoint</div>
+        <div class="mval">20<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-err">
+        <div class="mlabel">Error</div>
+        <div class="mval">--<span class="munit">cm</span></div>
+      </div>
+      <div class="mc" id="mc-fin">
+        <div class="mlabel">Inflow</div>
+        <div class="mval">--<span class="munit">L/m</span></div>
+      </div>
+      <div class="mc" id="mc-temp">
+        <div class="mlabel">Temp</div>
+        <div class="mval">--<span class="munit">°C</span></div>
+      </div>
+      <div class="mc" id="mc-pwm">
+        <div class="mlabel">Pump PWM</div>
+        <div class="mval">--<span class="munit">%</span></div>
+      </div>
+    </div>
+
+    <div class="gauge-row">
+      <div class="gauge">
+        <div class="gauge-label">Tank level</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-level" style="width:0%;background:#185FA5"></div>
+        </div>
+        <div class="gauge-val" id="gv-level">-- <span class="gauge-unit">/ 40 cm</span></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Pump PWM</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-pwm" style="width:0%;background:#7F77DD"></div>
+        </div>
+        <div class="gauge-val" id="gv-pwm">-- <span class="gauge-unit">%</span></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Temperature</div>
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar" id="g-temp" style="width:0%;background:#D85A30"></div>
+        </div>
+        <div class="gauge-val" id="gv-temp">-- <span class="gauge-unit">/ 80 °C</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Setpoint &amp; control mode</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>Setpoint (cm)</label>
+          <input type="number" id="ov-sp" value="20" min="0" max="40" step="0.5" oninput="updateSP()">
+        </div>
+        <div class="field">
+          <label>Control mode</label>
+          <select id="ov-mode" onchange="updateMode()">
+            <option>ON/OFF</option>
+            <option>P</option>
+            <option>PI</option>
+            <option selected>PID</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Heater</label>
+          <select id="ov-heat">
+            <option>OFF</option>
+            <option>ON</option>
+          </select>
+        </div>
+      </div>
+      <div id="alerts-box" style="margin-top:.75rem"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Manual sensor entry (offline mode)</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Level (cm)</label>
+          <input type="number" id="m-level" placeholder="e.g. 18.5" step="0.1">
+        </div>
+        <div class="field">
+          <label>Inflow (L/min)</label>
+          <input type="number" id="m-fin" placeholder="e.g. 2.1" step="0.01">
+        </div>
+      </div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>Outflow (L/min)</label>
+          <input type="number" id="m-fout" placeholder="e.g. 1.9" step="0.01">
+        </div>
+        <div class="field">
+          <label>Temperature (°C)</label>
+          <input type="number" id="m-temp" placeholder="e.g. 28.5" step="0.1">
+        </div>
+        <div class="field">
+          <label>Pump PWM (%)</label>
+          <input type="number" id="m-pwm" placeholder="0–100" min="0" max="100">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:8px">
+        <label>Notes</label>
+        <input type="text" id="m-note" placeholder="e.g. step disturbance at t=30s">
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="addManual()">Log reading</button>
+        <button class="btn" onclick="simulateStream()">Simulate stream</button>
+      </div>
+    </div>
+
+  </div><!-- /panel-overview -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 2 — CHARTS
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-charts">
+
+    <div class="card">
+      <div class="ctitle">Level vs setpoint</div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#185FA5"></span>Level</span>
+        <span><span class="legend-dot" style="background:#E24B4A;border-top:2px dashed #E24B4A;background:transparent"></span>Setpoint</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cLevel" role="img" aria-label="Tank level vs setpoint">Tank level vs setpoint</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Flow rates</div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#1D9E75"></span>Inflow</span>
+        <span><span class="legend-dot" style="background:#EF9F27"></span>Outflow</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cFlow" role="img" aria-label="Inflow and outflow rates">Flow rates</canvas>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="card">
+        <div class="ctitle">Temperature</div>
+        <div class="chart-wrap short">
+          <canvas id="cTemp" role="img" aria-label="Temperature over time">Temperature</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Pump PWM</div>
+        <div class="chart-wrap short">
+          <canvas id="cPWM" role="img" aria-label="Pump PWM over time">PWM</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="buildCharts()">Refresh charts</button>
+      <button class="btn" onclick="clearData()">Clear all data</button>
+    </div>
+
+  </div><!-- /panel-charts -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 3 — PID TUNING
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-pid">
+
+    <div class="card">
+      <div class="ctitle">Ziegler–Nichols calculator</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Ultimate gain K<sub>u</sub></label>
+          <input type="number" id="ku" placeholder="e.g. 4.2" step="0.01" oninput="calcZN()">
+        </div>
+        <div class="field">
+          <label>Oscillation period P<sub>u</sub> (s)</label>
+          <input type="number" id="pu" placeholder="e.g. 12" step="0.1" oninput="calcZN()">
+        </div>
+      </div>
+      <div class="zn-grid" id="zn-out">
+        <div class="gauge">
+          <div class="gauge-label">P only</div>
+          <div class="zn-sublabel">Kp</div>
+          <div class="pid-num" id="zp-kp">—</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">PI</div>
+          <div class="zn-sublabel">Kp / Ti</div>
+          <div class="pid-num" id="zpi-kp">—</div>
+          <div class="zn-sub" id="zpi-ti"></div>
+        </div>
+        <div class="gauge zn-highlight">
+          <div class="gauge-label">PID</div>
+          <div class="zn-sublabel">Kp / Ki / Kd</div>
+          <div class="pid-num" id="zpid-kp">—</div>
+          <div class="zn-sub" id="zpid-ti"></div>
+          <div class="zn-sub" id="zpid-td"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Active PID gains</div>
+      <div class="form-grid three">
+        <div class="field">
+          <label>K<sub>p</sub></label>
+          <input type="number" id="pk" placeholder="0.000" step="0.001" oninput="updatePIDDisplay()">
+        </div>
+        <div class="field">
+          <label>K<sub>i</sub></label>
+          <input type="number" id="ik" placeholder="0.000" step="0.0001" oninput="updatePIDDisplay()">
+        </div>
+        <div class="field">
+          <label>K<sub>d</sub></label>
+          <input type="number" id="dk" placeholder="0.000" step="0.0001" oninput="updatePIDDisplay()">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Tuning method</label>
+          <select id="tune-method">
+            <option>Ziegler–Nichols</option>
+            <option>Manual</option>
+            <option>Trial &amp; error</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Observations</label>
+          <input type="text" id="tune-obs" placeholder="e.g. stable, no overshoot">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="savePID()">Save session</button>
+        <button class="btn" onclick="applyZN()">Apply Z-N values</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">PID session history</div>
+      <div id="pid-hist"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">ESP8266 Arduino sketch snippet</div>
+      <pre class="code-block" id="arduino-code">// Enter Kp, Ki, Kd above to generate snippet</pre>
+    </div>
+
+  </div><!-- /panel-pid -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 4 — WI-FI SETUP
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-wifi">
+
+    <div class="alert-box info">
+      This dashboard can receive sensor data directly from your ESP8266 over Wi-Fi.
+      Configure your ESP8266 to POST JSON to the endpoint shown below.
+    </div>
+
+    <div class="card">
+      <div class="ctitle">ESP8266 Arduino sketch (Wi-Fi POST)</div>
+      <pre class="code-block">#include &lt;ESP8266WiFi.h&gt;
+#include &lt;ESP8266HTTPClient.h&gt;
+#include &lt;ArduinoJson.h&gt;
+
+const char* ssid     = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+const char* endpoint = "http://&lt;your-server-ip&gt;:5000/data";
+
+float readLevel()  { /* HC-SR04 ultrasonic */ return level_cm; }
+float readFlow()   { /* YF-S201 pulse count */ return flow_Lmin; }
+float readTemp()   { /* DS18B20 one-wire    */ return temp_C; }
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+  Serial.println("Connected: " + WiFi.localIP().toString());
+}
+
+void loop() {
+  StaticJsonDocument&lt;256&gt; doc;
+  doc["level"] = readLevel();
+  doc["fin"]   = readFlow();
+  doc["fout"]  = 0;
+  doc["temp"]  = readTemp();
+  doc["pwm"]   = analogRead(A0) / 10.24;
+  doc["sp"]    = 20.0;
+  doc["mode"]  = "PID";
+
+  String body; serializeJson(doc, body);
+  WiFiClient client; HTTPClient http;
+  http.begin(client, endpoint);
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST(body);
+  Serial.println("POST " + String(code));
+  http.end();
+  delay(1000);
+}</pre>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Python Flask receiver (run on your laptop)</div>
+      <pre class="code-block">from flask import Flask, request, jsonify
+import csv, time
+
+app = Flask(__name__)
+log_file = "sensor_log.csv"
+
+@app.route("/data", methods=["POST"])
+def receive():
+    data = request.get_json()
+    data["ts"] = time.strftime("%H:%M:%S")
+    print(data)
+    with open(log_file, "a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=data.keys())
+        if f.tell() == 0: w.writeheader()
+        w.writerow(data)
+    return jsonify({"ok": True})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+# Run: python server.py
+# ESP8266 posts to: http://&lt;laptop-ip&gt;:5000/data</pre>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Simulate Wi-Fi stream (demo)</div>
+      <p class="hint-text">
+        No hardware? Click below to simulate a live ESP8266 stream with
+        realistic PID dynamics and a step disturbance at reading 15.
+      </p>
+      <div class="btn-row">
+        <button class="btn primary" onclick="startSim()">Start simulation</button>
+        <button class="btn" onclick="stopSim()">Stop</button>
+      </div>
+      <div class="sim-status" id="sim-status">Idle</div>
+    </div>
+
+  </div><!-- /panel-wifi -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 5 — DATA LOG
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-log">
+    <div class="card">
+      <div class="log-header">
+        <div class="ctitle" style="margin-bottom:0">Sensor log</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="ts-label" id="log-count">0 readings</span>
+          <button class="btn small" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <div id="log-wrap"><div class="empty">No readings logged yet.</div></div>
+    </div>
+  </div><!-- /panel-log -->
+
+  <!-- ══════════════════════════════════════════════════════
+       PANEL 6 — PERFORMANCE
+  ══════════════════════════════════════════════════════ -->
+  <div class="panel" id="panel-perf">
+    <div id="perf-wrap">
+      <div class="empty">Log at least 5 readings with a setpoint to compute metrics.</div>
+    </div>
+  </div><!-- /panel-perf -->
+
+</div><!-- /container -->
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- App logic -->
+
+
+<script>
+/* ============================================================
+   app.js — ESP8266 Process Control Dashboard
+   JKUAT · Level, Flow & Temperature Control System
+   ============================================================ */
+
+// ── State ──────────────────────────────────────────────────
+let readings    = [];
+let pidSessions = [];
+let charts      = {};
+let simTimer    = null;
+let simMode     = false;
+let simStep     = 0;
+
+// ── Helper: read current setpoint from input ───────────────
+const SP = () => parseFloat(document.getElementById('ov-sp').value) || 20;
+
+// ── Storage helpers (localStorage fallback) ────────────────
+async function storageGet(key) {
+  try {
+    if (window.storage) {
+      const r = await window.storage.get(key);
+      return r ? r.value : null;
+    }
+  } catch (_) {}
+  return localStorage.getItem(key);
+}
+
+async function storageSet(key, value) {
+  try {
+    if (window.storage) { await window.storage.set(key, value); return; }
+  } catch (_) {}
+  localStorage.setItem(key, value);
+}
+
+// ── Load persisted data on startup ────────────────────────
+async function load() {
+  try {
+    const r = await storageGet('esp_readings');
+    if (r) readings = JSON.parse(r);
+  } catch (_) {}
+  try {
+    const p = await storageGet('esp_pid');
+    if (p) pidSessions = JSON.parse(p);
+  } catch (_) {}
+  refreshAll();
+}
+
+// ── Persist data ───────────────────────────────────────────
+async function persist() {
+  await storageSet('esp_readings', JSON.stringify(readings));
+  await storageSet('esp_pid',      JSON.stringify(pidSessions));
+}
+
+// ══════════════════════════════════════════════════════════
+//  TAB NAVIGATION
+// ══════════════════════════════════════════════════════════
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(e => e.classList.remove('active'));
+  document.querySelector(`[onclick="showTab('${t}')"]`).classList.add('active');
+  document.getElementById('panel-' + t).classList.add('active');
+
+  if (t === 'charts') setTimeout(buildCharts, 80);
+  if (t === 'perf')   buildPerf();
+  if (t === 'log')    buildLog();
+}
+
+// ══════════════════════════════════════════════════════════
+//  CONNECTION BADGE TOGGLE
+// ══════════════════════════════════════════════════════════
+function toggleMode() {
+  simMode = !simMode;
+  document.getElementById('conn-dot').className   = 'dot ' + (simMode ? 'sim' : 'off');
+  document.getElementById('conn-label').textContent = simMode ? 'Simulating' : 'Offline';
+}
+
+// ══════════════════════════════════════════════════════════
+//  INGEST A READING (from manual entry or simulation)
+// ══════════════════════════════════════════════════════════
+function ingest(r) {
+  r.idx  = readings.length + 1;
+  r.ts   = new Date().toLocaleTimeString();
+  r.sp   = SP();
+  r.mode = document.getElementById('ov-mode').value;
+  readings.push(r);
+  persist();
+  updateMetrics(r);
+  updateGauges(r);
+  buildAlerts(r);
+  document.getElementById('last-update').textContent = 'Last: ' + r.ts;
+  document.getElementById('log-count').textContent   = readings.length + ' readings';
+}
+
+// ── Manual entry ───────────────────────────────────────────
+function addManual() {
+  const lvl = parseFloat(document.getElementById('m-level').value);
+  if (isNaN(lvl)) { alert('Tank level is required.'); return; }
+  ingest({
+    level : lvl,
+    fin   : parseFloat(document.getElementById('m-fin').value)  || 0,
+    fout  : parseFloat(document.getElementById('m-fout').value) || 0,
+    temp  : parseFloat(document.getElementById('m-temp').value) || 0,
+    pwm   : parseFloat(document.getElementById('m-pwm').value)  || 0,
+    note  : document.getElementById('m-note').value
+  });
+  ['m-level','m-fin','m-fout','m-temp','m-pwm','m-note']
+    .forEach(id => document.getElementById(id).value = '');
+}
+
+// ── Single simulate point ──────────────────────────────────
+function simulateStream() {
+  ingest({ level: SP() - 3, fin: 2.0, fout: 1.8, temp: 27, pwm: 60, note: 'manual sim' });
+}
+
+// ══════════════════════════════════════════════════════════
+//  SIMULATION STREAM (40 readings, step disturbance at 15)
+// ══════════════════════════════════════════════════════════
+function startSim() {
+  if (simTimer) return;
+  simStep = 0;
+  document.getElementById('sim-status').textContent  = 'Running...';
+  document.getElementById('conn-dot').className      = 'dot sim';
+  document.getElementById('conn-label').textContent  = 'Simulating';
+
+  simTimer = setInterval(() => {
+    simStep++;
+    const sp   = SP();
+    const dist = simStep === 15 ? 3 : 0;
+    const prev = readings.length ? readings[readings.length - 1].level : sp - 5;
+    const err  = sp - prev;
+    const kp   = parseFloat(document.getElementById('pk').value) || 2.5;
+    const ki   = parseFloat(document.getElementById('ik').value) || 0.12;
+    const integral = err * simStep * 0.1;
+
+    let pwm   = Math.min(100, Math.max(0, kp * err + ki * integral));
+    let level = prev + (pwm / 100) * 0.6 - 0.5 + dist + (Math.random() - .5) * 0.1;
+    level     = Math.max(0, Math.min(40, parseFloat(level.toFixed(2))));
+
+    const fin  = parseFloat((1.8 + pwm / 100 * 0.8 + dist * 0.3).toFixed(2));
+    const fout = parseFloat((1.6 + level * 0.02).toFixed(2));
+    const temp = parseFloat((26  + simStep * 0.05 + Math.random() * 0.2).toFixed(1));
+
+    ingest({ level, fin, fout, temp, pwm: parseFloat(pwm.toFixed(1)), note: dist ? 'step disturbance' : 'sim' });
+
+    // Refresh charts every 5 readings if chart tab is visible
+    if (simStep % 5 === 0) {
+      const activePanelId = document.querySelector('.panel.active')?.id;
+      if (activePanelId === 'panel-charts') buildCharts();
+    }
+
+    if (simStep >= 40) stopSim();
+  }, 800);
+}
+
+function stopSim() {
+  clearInterval(simTimer); simTimer = null;
+  document.getElementById('sim-status').textContent  = 'Stopped at ' + readings.length + ' readings.';
+  document.getElementById('conn-dot').className      = 'dot off';
+  document.getElementById('conn-label').textContent  = 'Offline';
+  buildCharts(); buildPerf(); buildLog();
+}
+
+// ══════════════════════════════════════════════════════════
+//  METRIC CARDS
+// ══════════════════════════════════════════════════════════
+function updateMetrics(r) {
+  const err    = (r.level - r.sp).toFixed(2);
+  const errCls = Math.abs(err) < 1 ? 'ok-card' : Math.abs(err) < 3 ? 'warn-card' : 'alert-card';
+
+  document.getElementById('mc-level').innerHTML =
+    `<div class="mlabel">Tank level</div><div class="mval">${r.level.toFixed(1)}<span class="munit">cm</span></div>`;
+  document.getElementById('mc-sp').innerHTML =
+    `<div class="mlabel">Setpoint</div><div class="mval">${r.sp}<span class="munit">cm</span></div>`;
+  document.getElementById('mc-err').className = 'mc ' + errCls;
+  document.getElementById('mc-err').innerHTML =
+    `<div class="mlabel">Error</div><div class="mval">${err}<span class="munit">cm</span></div>`;
+  document.getElementById('mc-fin').innerHTML =
+    `<div class="mlabel">Inflow</div><div class="mval">${r.fin.toFixed(2)}<span class="munit">L/m</span></div>`;
+  document.getElementById('mc-temp').innerHTML =
+    `<div class="mlabel">Temp</div><div class="mval">${r.temp.toFixed(1)}<span class="munit">°C</span></div>`;
+  document.getElementById('mc-pwm').innerHTML =
+    `<div class="mlabel">Pump PWM</div><div class="mval">${r.pwm.toFixed(0)}<span class="munit">%</span></div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  GAUGE BARS
+// ══════════════════════════════════════════════════════════
+function updateGauges(r) {
+  const lp = Math.min(100, r.level / 40 * 100);
+  document.getElementById('g-level').style.width      = lp + '%';
+  document.getElementById('g-level').style.background = lp > 80 ? '#E24B4A' : lp > 60 ? '#EF9F27' : '#185FA5';
+  document.getElementById('gv-level').innerHTML       = `${r.level.toFixed(1)} <span class="gauge-unit">/ 40 cm</span>`;
+
+  document.getElementById('g-pwm').style.width  = r.pwm + '%';
+  document.getElementById('gv-pwm').innerHTML   = `${r.pwm.toFixed(0)} <span class="gauge-unit">%</span>`;
+
+  const tp = Math.min(100, r.temp / 80 * 100);
+  document.getElementById('g-temp').style.width      = tp + '%';
+  document.getElementById('g-temp').style.background = tp > 75 ? '#E24B4A' : tp > 50 ? '#EF9F27' : '#1D9E75';
+  document.getElementById('gv-temp').innerHTML       = `${r.temp.toFixed(1)} <span class="gauge-unit">/ 80 °C</span>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  ALERTS
+// ══════════════════════════════════════════════════════════
+function buildAlerts(r) {
+  const box    = document.getElementById('alerts-box');
+  const alerts = [];
+
+  if (r.level > 38) alerts.push({ cls: 'danger', msg: `Tank near overflow — level at ${r.level.toFixed(1)} cm` });
+  if (r.level < 3)  alerts.push({ cls: 'danger', msg: `Tank critically low — level at ${r.level.toFixed(1)} cm` });
+  if (Math.abs(r.level - r.sp) > 5) alerts.push({ cls: 'warn', msg: `Large error: ${Math.abs(r.level - r.sp).toFixed(1)} cm from setpoint` });
+  if (r.temp > 60)  alerts.push({ cls: 'warn',   msg: `High temperature: ${r.temp.toFixed(1)}°C` });
+  if (!alerts.length) alerts.push({ cls: 'ok',   msg: 'System nominal — all parameters within range' });
+
+  box.innerHTML = alerts.map(a => `<div class="alert-box ${a.cls}">${a.msg}</div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════════════════════════
+function buildCharts() {
+  if (!readings.length) return;
+  const labels = readings.map(r => r.idx);
+
+  ['cLevel','cFlow','cTemp','cPWM'].forEach(id => {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  });
+
+  // Level vs Setpoint
+  charts['cLevel'] = new Chart(document.getElementById('cLevel'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Level', data: readings.map(r => r.level),
+          borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,0.07)',
+          tension: .3, fill: true, pointRadius: 2, borderWidth: 2 },
+        { label: 'Setpoint', data: readings.map(r => r.sp),
+          borderColor: '#E24B4A', borderDash: [5,3],
+          tension: 0, pointRadius: 0, borderWidth: 1.5 }
+      ]
+    },
+    options: chartOpts('cm')
+  });
+
+  // Flow rates
+  charts['cFlow'] = new Chart(document.getElementById('cFlow'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Inflow',  data: readings.map(r => r.fin),
+          borderColor: '#1D9E75', tension: .3, pointRadius: 2, borderWidth: 2 },
+        { label: 'Outflow', data: readings.map(r => r.fout),
+          borderColor: '#EF9F27', borderDash: [4,3], tension: .3, pointRadius: 2, borderWidth: 2 }
+      ]
+    },
+    options: chartOpts('L/min')
+  });
+
+  // Temperature
+  const tc = document.getElementById('cTemp');
+  if (tc) {
+    charts['cTemp'] = new Chart(tc, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'Temp', data: readings.map(r => r.temp),
+          borderColor: '#D85A30', tension: .3, pointRadius: 2, borderWidth: 2 }
+      ]},
+      options: chartOpts('°C')
+    });
+  }
+
+  // Pump PWM
+  const pc = document.getElementById('cPWM');
+  if (pc) {
+    charts['cPWM'] = new Chart(pc, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'PWM', data: readings.map(r => r.pwm),
+          borderColor: '#7F77DD', tension: .3, pointRadius: 2, borderWidth: 2,
+          fill: true, backgroundColor: 'rgba(127,119,221,0.07)' }
+      ]},
+      options: { ...chartOpts('%'), scales: { y: { min: 0, max: 100, title: { display: true, text: '%' } } } }
+    });
+  }
+}
+
+// Shared Chart.js options
+function chartOpts(yLabel) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales:  { y: { title: { display: true, text: yLabel } } }
+  };
+}
+
+function clearData() {
+  if (!confirm('Clear all readings? This cannot be undone.')) return;
+  readings = [];
+  persist();
+  refreshAll();
+}
+
+// ══════════════════════════════════════════════════════════
+//  PID TUNING
+// ══════════════════════════════════════════════════════════
+
+// Ziegler–Nichols calculator
+function calcZN() {
+  const ku = parseFloat(document.getElementById('ku').value);
+  const pu = parseFloat(document.getElementById('pu').value);
+  if (isNaN(ku) || isNaN(pu)) return;
+
+  document.getElementById('zp-kp').textContent  = (0.5  * ku).toFixed(3);
+  document.getElementById('zpi-kp').textContent = (0.45 * ku).toFixed(3);
+  document.getElementById('zpi-ti').textContent = `Ti = ${(pu / 1.2).toFixed(2)} s`;
+  document.getElementById('zpid-kp').textContent = (0.6 * ku).toFixed(3);
+  document.getElementById('zpid-ti').textContent = `Ti = ${(pu / 2).toFixed(2)} s`;
+  document.getElementById('zpid-td').textContent = `Td = ${(pu / 8).toFixed(2)} s`;
+}
+
+// Apply Z-N PID values to gain fields
+function applyZN() {
+  const ku = parseFloat(document.getElementById('ku').value);
+  const pu = parseFloat(document.getElementById('pu').value);
+  if (isNaN(ku) || isNaN(pu)) { alert('Enter Ku and Pu first.'); return; }
+
+  const kp = 0.6 * ku;
+  const ti = pu / 2;
+  const td = pu / 8;
+  document.getElementById('pk').value = kp.toFixed(3);
+  document.getElementById('ik').value = (kp / ti).toFixed(4);
+  document.getElementById('dk').value = (kp * td).toFixed(4);
+  updatePIDDisplay();
+}
+
+// Generate ESP8266 Arduino snippet from current gains
+function updatePIDDisplay() {
+  const kp = parseFloat(document.getElementById('pk').value) || 0;
+  const ki = parseFloat(document.getElementById('ik').value) || 0;
+  const kd = parseFloat(document.getElementById('dk').value) || 0;
+
+  document.getElementById('arduino-code').textContent =
+`double Kp = ${kp.toFixed(4)};
+double Ki = ${ki.toFixed(4)};
+double Kd = ${kd.toFixed(4)};
+double setpoint = ${SP()};
+
+double error, prevError = 0, integral = 0;
+
+// In loop():
+double input     = readUltrasonic();   // HC-SR04
+error            = setpoint - input;
+integral        += error * dt;
+double derivative = (error - prevError) / dt;
+double output    = Kp*error + Ki*integral + Kd*derivative;
+output           = constrain(output, 0, 255);
+analogWrite(PUMP_PIN, (int)output);    // ESP8266 PWM
+prevError        = error;`;
+}
+
+// Save PID session
+function savePID() {
+  const kp = parseFloat(document.getElementById('pk').value);
+  if (isNaN(kp)) { alert('Enter Kp first.'); return; }
+  pidSessions.push({
+    ts    : new Date().toLocaleTimeString(),
+    kp,
+    ki    : parseFloat(document.getElementById('ik').value)       || 0,
+    kd    : parseFloat(document.getElementById('dk').value)       || 0,
+    method: document.getElementById('tune-method').value,
+    obs   : document.getElementById('tune-obs').value
+  });
+  persist();
+  buildPIDHist();
+}
+
+// Render PID history table
+function buildPIDHist() {
+  const el = document.getElementById('pid-hist');
+  if (!pidSessions.length) {
+    el.innerHTML = '<div class="empty">No sessions saved.</div>';
+    return;
+  }
+  const rows = [...pidSessions].reverse().map(p =>
+    `<tr>
+      <td>${p.ts}</td>
+      <td>${p.kp.toFixed(3)}</td>
+      <td>${p.ki.toFixed(4)}</td>
+      <td>${p.kd.toFixed(4)}</td>
+      <td>${p.method}</td>
+      <td style="color:#888;font-size:12px">${p.obs || ''}</td>
+    </tr>`
+  ).join('');
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Kp</th><th>Ki</th><th>Kd</th><th>Method</th><th>Notes</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  DATA LOG TABLE
+// ══════════════════════════════════════════════════════════
+function buildLog() {
+  document.getElementById('log-count').textContent = readings.length + ' readings';
+  const wrap = document.getElementById('log-wrap');
+
+  if (!readings.length) {
+    wrap.innerHTML = '<div class="empty">No readings logged yet.</div>';
+    return;
+  }
+
+  const rows = [...readings].reverse().slice(0, 50).map(r => {
+    const err = r.sp ? (r.level - r.sp).toFixed(2) : '—';
+    const cls = r.sp
+      ? (Math.abs(r.level - r.sp) < 1 ? 'good' : Math.abs(r.level - r.sp) < 3 ? 'warn' : 'bad')
+      : 'info';
+    return `<tr>
+      <td>${r.idx}</td>
+      <td>${r.ts}</td>
+      <td>${r.level.toFixed(1)}</td>
+      <td>${r.sp || '—'}</td>
+      <td>${err !== '—' ? `<span class="badge ${cls}">${err}</span>` : '—'}</td>
+      <td>${r.fin.toFixed(2)}</td>
+      <td>${r.fout.toFixed(2)}</td>
+      <td>${r.temp.toFixed(1)}</td>
+      <td>${r.pwm.toFixed(0)}</td>
+      <td>${r.mode || ''}</td>
+      <td style="font-size:12px;color:#888">${r.note || ''}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Time</th><th>Level</th><th>SP</th><th>Error</th>
+            <th>Qin</th><th>Qout</th><th>Temp</th><th>PWM</th><th>Mode</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  PERFORMANCE ANALYSIS
+// ══════════════════════════════════════════════════════════
+function buildPerf() {
+  const el   = document.getElementById('perf-wrap');
+  const sp_r = readings.filter(r => r.sp > 0);
+
+  if (sp_r.length < 5) {
+    el.innerHTML = '<div class="empty">Log at least 5 readings with a setpoint set.</div>';
+    return;
+  }
+
+  const errors      = sp_r.map(r => r.level - r.sp);
+  const absE        = errors.map(Math.abs);
+  const maxE        = Math.max(...absE).toFixed(2);
+  const ssE         = errors[errors.length - 1].toFixed(2);
+  const overshoot   = Math.max(...errors).toFixed(2);
+  const sp          = sp_r[0].sp;
+  const ovPct       = (Math.max(...errors) / sp * 100).toFixed(1);
+  const riseIdx     = sp_r.findIndex(r => r.level >= sp * 0.9);
+  const settleCount = errors.filter(e => Math.abs(e) <= sp * 0.02).length;
+
+  const bar = (v, good, bad, max) => {
+    const w = Math.min(100, v / max * 100);
+    const c = v <= good ? '#1D9E75' : v <= bad ? '#EF9F27' : '#E24B4A';
+    return `<div class="perf-bar-bg">
+      <div style="height:100%;border-radius:4px;width:${w}%;background:${c};transition:width .4s"></div>
+    </div>`;
+  };
+
+  const mcCls = (v, g, b) => v <= g ? 'ok-card' : v <= b ? 'warn-card' : 'alert-card';
+
+  el.innerHTML = `
+    <div class="metrics">
+      <div class="mc ${mcCls(Math.abs(ssE), 0.5, 1.5)}">
+        <div class="mlabel">Steady-state error</div>
+        <div class="mval">${ssE}<span class="munit">cm</span></div>
+      </div>
+      <div class="mc ${mcCls(parseFloat(maxE), 1, 3)}">
+        <div class="mlabel">Max abs error</div>
+        <div class="mval">${maxE}<span class="munit">cm</span></div>
+      </div>
+      <div class="mc ${mcCls(parseFloat(ovPct), 10, 20)}">
+        <div class="mlabel">Overshoot</div>
+        <div class="mval">${overshoot}<span class="munit">cm</span></div>
+      </div>
+      <div class="mc">
+        <div class="mlabel">Overshoot %</div>
+        <div class="mval">${ovPct}<span class="munit">%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Performance index</div>
+
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:3px">
+          <span>Steady-state error</span><span>${Math.abs(ssE)} cm</span>
+        </div>
+        ${bar(Math.abs(ssE), 0.5, 1.5, 5)}
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:3px">
+          <span>Max error</span><span>${maxE} cm</span>
+        </div>
+        ${bar(parseFloat(maxE), 1, 3, 10)}
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:3px">
+          <span>Overshoot %</span><span>${ovPct}%</span>
+        </div>
+        ${bar(parseFloat(ovPct), 10, 20, 50)}
+      </div>
+
+      <div style="margin-top:1rem;font-size:13px;color:#666">
+        Readings within 2% of SP:
+        <strong style="color:#111">${settleCount} / ${sp_r.length}</strong>
+        &nbsp;|&nbsp;
+        Rise to 90% SP: reading
+        <strong style="color:#111">${riseIdx >= 0 ? riseIdx + 1 : '—'}</strong>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ══════════════════════════════════════════════════════════
+function exportCSV() {
+  let csv = 'Index,Time,Level_cm,Setpoint_cm,Error_cm,Inflow_Lmin,Outflow_Lmin,Temp_C,PWM_pct,Mode,Notes\n';
+  readings.forEach(r => {
+    csv += `${r.idx},${r.ts},${r.level},${r.sp || 0},` +
+           `${r.sp ? (r.level - r.sp).toFixed(2) : 0},` +
+           `${r.fin},${r.fout},${r.temp},${r.pwm},${r.mode || ''},"${r.note || ''}"\n`;
+  });
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'esp8266_control_log.csv';
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════════
+//  MISC
+// ══════════════════════════════════════════════════════════
+function updateSP() {
+  if (readings.length) buildAlerts(readings[readings.length - 1]);
+}
+
+function updateMode() { /* reserved for future mode-switch logic */ }
+
+function refreshAll() {
+  buildLog();
+  buildPIDHist();
+  buildAlerts({ level: SP(), sp: SP(), fin: 0, fout: 0, temp: 25, pwm: 0, note: '' });
+  if (readings.length) {
+    const last = readings[readings.length - 1];
+    updateMetrics(last);
+    updateGauges(last);
+  }
+}
+
+// ── Kick off ───────────────────────────────────────────────
+load();
+
+</script>
+</body>
+</html>
